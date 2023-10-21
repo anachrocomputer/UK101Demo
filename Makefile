@@ -16,15 +16,18 @@ UK101.asm: UK101.pbm pbm2fcb
 
 graphic1.asm: graphic1.pbm pbm2fcb
 	./pbm2fcb graphic1.pbm >graphic1.asm
-	
-UK101Demo.asm: DemoMain.asm UK101.asm graphic1.asm
-	cat DemoMain.asm UK101.asm graphic1.asm >UK101Demo.asm
+
+m6502.asm: m6502.pbm pbm2fcb
+	./pbm2fcb m6502.pbm >m6502.asm
+
+UK101Demo.asm: DemoMain.asm UK101.asm graphic1.asm m6502.asm
+	cat DemoMain.asm UK101.asm graphic1.asm m6502.asm >UK101Demo.asm
 
 UK101Demo.hex: UK101Demo.asm UK101.asm
 	$(AS65) UK101Demo.asm UK101Demo.hex UK101Demo.lst
 
 # Target 'clean' will delete all object files and HEX files
 clean:
-	-rm -f *.o *.obj *.hex pbm2fcb UK101Demo.asm UK101.asm graphic1.asm
+	-rm -f *.o *.obj *.hex pbm2fcb UK101Demo.asm UK101.asm graphic1.asm m6502.asm
 
 .PHONY: clean

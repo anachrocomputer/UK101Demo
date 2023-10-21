@@ -80,10 +80,14 @@ COLROW13    EQU COLHOME+VDUOFF13
 COLROW14    EQU COLHOME+VDUOFF14
 COLROW15    EQU COLHOME+VDUOFF15
 
+BLUE            equ 128+1                 ; Colour blue and standard UK101 character set
+RED             equ 128+2
 GREEN           equ 128+4
-YELLOW          equ 128+6
-WHITE           equ 128+7
-COLOUR          equ $0202
+YELLOW          equ RED|GREEN
+MAGENTA         equ RED|BLUE
+CYAN            equ GREEN|BLUE
+WHITE           equ RED|CYAN
+COLOUR          equ $0202                 ; Location where UK101 monitor keeps the current colour
 
 map0            equ $d0                   ; Vector to bit-map data
 map1            equ $d2                   ; Vector to bit-map data
@@ -94,6 +98,7 @@ col             equ $d9
 byt             equ $da                   ; Byte counter 5..0
 mapb            equ $db
 mask            equ $dc
+rowdelay        equ $dd
 
                 org $0300
 main            lda #JMP_ABS              ; Jump absolute opcode
@@ -108,6 +113,14 @@ main            lda #JMP_ABS              ; Jump absolute opcode
                 lda #<UK101
                 ldy #>UK101
                 ldx #0
+                jsr showbitmap            ; Show first bitmap
+                nop
+                jsr GETKEY
+                lda #CYAN                 ; Select cyan text on black
+                sta COLOUR
+                lda #<m6502
+                ldy #>m6502
+                ldx #128                  ; Display more slowly
                 jsr showbitmap            ; Show first bitmap
                 nop
                 jsr GETKEY
@@ -127,16 +140,21 @@ main            lda #JMP_ABS              ; Jump absolute opcode
                 jsr showbitmap            ; Show third bitmap
                 nop
                 jsr GETKEY
+                
+                ldx #48                   ; Scroll 48 times to clear screen
 loop            lda #255
                 jsr delay2
                 jsr scroll1r              ; Scroll VDU to the right
-                jmp loop
+                dex
+                bne loop
+                brk
                 
 ; showbitmap
 ; Display a 48x32 pixel bitmap on UK101 text screen
 ; Entry: A,Y -> bitmap, X = delay (for each row)
 showbitmap      sta map0                  ; Set up vector to bit-map
                 sty map0+1
+                stx rowdelay              ; Save delay factor
                 clc
                 adc #6
                 sta map1                  ; Vector to next row of bit-map
@@ -213,6 +231,10 @@ done            ldy col
                 sta vdu
                 bcc shnc
                 inc vdu+1
+                
+                lda rowdelay
+                jsr delay2                ; Delay for each row drawn
+
 shnc            dec row
                 bpl shrow
                 rts
@@ -290,11 +312,28 @@ scrlr1          lda VDUROW0,Y     ; Fetch a byte...
                 pla
                 rts
                 
-delay2          tax
-dly2            ldy #0
+; delay2
+; Spin-loop delay routine
+; Entry: A=delay
+; Exit:  X and Y changed
+delay2          sta dly4          ; Save A
+                pha
+                txa
+                pha
+                tya
+                pha
+                ldx dly4          ; Recover delay into X
+                beq dly3          ; Check for zero delay
+dly2            ldy #0            ; Y is inner loop counter
 dly1            dey
                 bne dly1
                 dex
                 bne dly2
+dly3            pla
+                tay
+                pla
+                tax
+                pla
                 rts
-                
+dly4            fcb 0
+
