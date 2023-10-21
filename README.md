@@ -15,6 +15,8 @@ people can compile it for their chosen host computer.
 The assembler generates a HEX file in MOS Technology checksum format.
 The UK101 Extended Monitor can load this file from the ACIA at 300 baud.
 My own modified UK101 has a checksum loader in EPROM and can load
-the file at 9600 baud.
+the file at 1200 baud.
+
+Once loaded, execute the program at address $0300.
 
 

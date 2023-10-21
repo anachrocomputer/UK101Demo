@@ -3,3 +3,6 @@
 *.obj
 *.lst
 pbm2fcb
+UK101Demo.asm
+UK101.asm
+graphic1.asm
