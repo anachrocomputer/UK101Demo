@@ -6,7 +6,7 @@
 
 #define MAXLINE   (256)
 
-int main(int argc, char *argv[])
+int main(const int argc, const char *const argv[])
 {
    int ch;
    int row;
@@ -21,12 +21,12 @@ int main(int argc, char *argv[])
    
    if (argc != 2) {
       fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
-      exit (1);
+      exit(1);
    }
    
    if ((fp = fopen(argv[1], "r")) == NULL) {
       perror(argv[1]);
-      exit (1);
+      exit(1);
    }
    
    if (fgets(buf, MAXLINE, fp) == NULL) {
@@ -36,12 +36,12 @@ int main(int argc, char *argv[])
 
    if (fgets(buf, MAXLINE, fp) == NULL) {
       perror("fgets 2");
-      exit (1);
+      exit(1);
    }
 
    if (fgets(buf, MAXLINE, fp) == NULL) {
       perror("fgets 3");
-      exit (1);
+      exit(1);
    }
    
    strcpy(buf, argv[1]);
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
             ch = fgetc(fp);
             if (ch == EOF) {
                perror("fgetc");
-               exit (1);
+               exit(1);
             }
             else if (ch == '\n')
                ch = fgetc(fp);
