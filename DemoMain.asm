@@ -1,6 +1,10 @@
 ; UK101Demo --- demo program for Compukit UK101            2023-10-19
 ; Copyright (c) 2023 John Honniball
 
+WARMJMP     EQU $0000     ; Location of JMP instruction for UK101 Warm Start
+WARMVEC     EQU $0001     ; Location of vector for UK101 Warm Start
+JMP_ABS     EQU $4C       ; 6502 jump absolute opcode
+
 BLANK       EQU $20
 VDUSTRIDE   EQU 64        ; Each VDU row occupies 64 bytes
 
@@ -92,7 +96,14 @@ mapb            equ $db
 mask            equ $dc
 
                 org $0300
-main            lda #WHITE                ; Select white text on black
+main            lda #JMP_ABS              ; Jump absolute opcode
+                sta WARMJMP
+                lda #<main                ; Vector for UK101 Warm Start
+                sta WARMVEC
+                lda #>main
+                sta WARMVEC+1
+                
+                lda #WHITE                ; Select white text on black
                 sta COLOUR
                 lda #<UK101
                 ldy #>UK101
