@@ -6,12 +6,20 @@ WARMVEC     EQU $0001     ; Location of vector for UK101 Warm Start
 JMP_ABS     EQU $4C       ; 6502 jump absolute opcode
 
 BLANK       EQU $20
+EOS         EQU 0
+CR          EQU 13
+LF          EQU 10
+CTRL_L      EQU 12
+
 VDUSTRIDE   EQU 64        ; Each VDU row occupies 64 bytes
+VDUROWS     EQU 16        ; UK101 VDU is 16 rows...
+VDUCOLS     EQU 48        ; ...of 48 characters
 
 SCRLWID     EQU $0207     ; Width of VDU RAM to scroll, 0-64 cols
 
 GETKEY      EQU $FD00     ; Read ASCII code from keyboard
 DELAY       EQU $FA95
+OUTCHAR     EQU $FFEE     ; VDU output routine in monitor ROM
 
 ; VDU RAM addresses
 VDURAM0     EQU $d000     ; Video memory start address
@@ -141,12 +149,20 @@ main            lda #JMP_ABS              ; Jump absolute opcode
                 nop
                 jsr GETKEY
                 
-                ldx #48                   ; Scroll 48 times to clear screen
+                ldx #VDUCOLS              ; Scroll 48 times to clear screen
 loop            lda #255
                 jsr delay2
                 jsr scroll1r              ; Scroll VDU to the right
                 dex
                 bne loop
+                
+                lda #WHITE                ; Select white text on black
+                sta COLOUR
+                lda #<BASICSPLASH
+                ldy #>BASICSPLASH
+                jsr prtmsg
+                jsr GETKEY
+                
                 brk
                 
 ; showbitmap
@@ -169,7 +185,7 @@ mapnc           sty map1+1
                 lda #0
                 sta mapb
                 
-                lda #15                   ; Set up row counter
+                lda #VDUROWS-1            ; Set up row counter
                 sta row
 
 shrow           lda #0                    ; Start at column 0 on VDU
@@ -312,6 +328,26 @@ scrlr1          lda VDUROW0,Y     ; Fetch a byte...
                 pla
                 rts
                 
+; prtmsg
+; Print a message pointed to by A and Y
+; Entry: A=LO, Y=HI
+; Exit: registers unchanged. Uses vector 'vdu'
+prtmsg          sta vdu
+                sty vdu+1
+                pha
+                tya
+                pha
+                ldy #0            ; Y is loop counter
+prtloop         lda (vdu),y       ; Get char from string
+                beq prtdone       ; End of string?
+                jsr OUTCHAR       ; Print it via the monitor ROM routine
+                iny               ; Next char
+                bne prtloop       ; Go round again
+prtdone         pla
+                tay
+                pla
+                rts
+                
 ; delay2
 ; Spin-loop delay routine
 ; Entry: A=delay
@@ -337,3 +373,27 @@ dly3            pla
                 rts
 dly4            fcb 0
 
+BASICSPLASH     FCB CTRL_L                ; Clear screen
+                TEX "D/C/W/M ?"           ; Original UK101 monitor
+                FCB CR,LF
+                TEX "MEMORY SIZE?"
+                FCB CR,LF
+                TEX "TERMINAL WIDTH?"
+                FCB CR,LF
+                FCB CR,LF
+                TEX " 7423 BYTES FREE"    ; Fully expanded 8k machine
+                FCB CR,LF
+                FCB CR,LF
+                TEX "C O M P U K I T  U K 1 0 1"
+                FCB CR,LF
+                FCB CR,LF
+                TEX "Personal Computer"
+                FCB CR,LF
+                FCB CR,LF
+                TEX "8K Basic Copyright1979"
+                FCB CR,LF
+                TEX "OK"
+                FCB CR,LF
+                FCB 150                   ; Original UK101 cursor
+                FCB EOS
+                
