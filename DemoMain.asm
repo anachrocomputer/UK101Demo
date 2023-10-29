@@ -173,6 +173,13 @@ loop            lda #255
                 
                 lda #<uk101save           ; Re-load earlier saved screen into VDU
                 ldy #>uk101save
+                ldx #0
+                jsr vduload
+                jsr GETKEY
+                
+                lda #<splashsave          ; Re-load earlier saved screen into VDU
+                ldy #>splashsave
+                ldx #255
                 jsr vduload
                 jsr GETKEY
                 
@@ -261,10 +268,10 @@ done            ldy col
                 bcc shnc
                 inc vdu+1
                 
-                lda rowdelay
+shnc            lda rowdelay
                 jsr delay2                ; Delay for each row drawn
 
-shnc            dec row
+                dec row
                 bpl shrow
                 rts
                 
@@ -385,10 +392,11 @@ nocarry2        dex
                 
 ; vduload
 ; Copy a buffer pointed to by A and Y into VDU RAM
-; Entry: A=LO, Y=HI pointer to save area in main RAM (source)
+; Entry: A=LO, Y=HI pointer to save area in main RAM (source), X=delay factor
 ; Exit: registers unchanged
 vduload         sta map0                  ; 'map0' vector points to save area in main RAM
                 sty map0+1
+                stx dlyload               ; Save delay factor
                 pha
                 txa
                 pha
@@ -416,7 +424,9 @@ nocarry3        clc                       ; Add VDUCOLS to 'map0' vector
                 sta map0
                 bcc nocarry4
                 inc map0+1
-nocarry4        dex
+nocarry4        lda dlyload               ; Optional delay for wipe effect
+                jsr delay2
+                dex
                 bpl rowload               ; Loop over rows
                 pla
                 tay
@@ -424,6 +434,7 @@ nocarry4        dex
                 tax
                 pla
                 rts
+dlyload         fcb 0
                 
 ; prtmsg
 ; Print a message pointed to by A and Y
@@ -448,7 +459,7 @@ prtdone         pla
 ; delay2
 ; Spin-loop delay routine
 ; Entry: A=delay
-; Exit:  X and Y changed
+; Exit:  registers unchanged
 delay2          sta dly4          ; Save A
                 pha
                 txa
@@ -458,7 +469,9 @@ delay2          sta dly4          ; Save A
                 ldx dly4          ; Recover delay into X
                 beq dly3          ; Check for zero delay
 dly2            ldy #0            ; Y is inner loop counter
-dly1            dey
+dly1            nop
+                nop
+                dey
                 bne dly1
                 dex
                 bne dly2
