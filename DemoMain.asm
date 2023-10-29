@@ -122,7 +122,11 @@ main            lda #JMP_ABS              ; Jump absolute opcode
                 ldy #>UK101
                 ldx #0
                 jsr showbitmap            ; Show first bitmap
-                nop
+                
+                lda #<uk101save           ; Save entire screen into RAM
+                ldy #>uk101save
+                jsr vdusave
+                
                 jsr GETKEY
                 lda #CYAN                 ; Select cyan text on black
                 sta COLOUR
@@ -161,6 +165,15 @@ loop            lda #255
                 lda #<BASICSPLASH
                 ldy #>BASICSPLASH
                 jsr prtmsg
+                
+                lda #<splashsave          ; Save entire screen into RAM
+                ldy #>splashsave
+                jsr vdusave
+                jsr GETKEY
+                
+                lda #<uk101save           ; Re-load earlier saved screen into VDU
+                ldy #>uk101save
+                jsr vduload
                 jsr GETKEY
                 
                 brk
@@ -328,6 +341,90 @@ scrlr1          lda VDUROW0,Y     ; Fetch a byte...
                 pla
                 rts
                 
+; vdusave
+; Copy VDU RAM into a buffer pointed to by A and Y
+; Entry: A=LO, Y=HI pointer to save area in main RAM (destination)
+; Exit: registers unchanged
+vdusave         sta map0                  ; 'map0' vector points to save area in main RAM
+                sty map0+1
+                pha
+                txa
+                pha
+                tya
+                pha
+                lda #<VDUHOME             ; 'vdu' vector points to VDU RAM
+                sta vdu
+                lda #>VDUHOME
+                sta vdu+1
+                ldx #VDUROWS-1            ; X is row counter, 15..0
+rowsave         ldy #VDUCOLS-1            ; Y is column counter, 47..0
+colsave         lda (vdu),y               ; Load from VDU RAM
+                sta (map0),y              ; Store into buffer in main RAM
+                dey
+                bpl colsave               ; Loop over columns
+                clc                       ; Add VDUSTRIDE to 'vdu' vector
+                lda vdu
+                adc #VDUSTRIDE
+                sta vdu
+                bcc nocarry1
+                inc vdu+1
+nocarry1        clc                       ; Add VDUCOLS to 'map0' vector
+                lda map0
+                adc #VDUCOLS
+                sta map0
+                bcc nocarry2
+                inc map0+1
+nocarry2        dex
+                bpl rowsave               ; Loop over rows
+                pla
+                tay
+                pla
+                tax
+                pla
+                rts
+                
+; vduload
+; Copy a buffer pointed to by A and Y into VDU RAM
+; Entry: A=LO, Y=HI pointer to save area in main RAM (source)
+; Exit: registers unchanged
+vduload         sta map0                  ; 'map0' vector points to save area in main RAM
+                sty map0+1
+                pha
+                txa
+                pha
+                tya
+                pha
+                lda #<VDUHOME             ; 'vdu' vector points to VDU RAM
+                sta vdu
+                lda #>VDUHOME
+                sta vdu+1
+                ldx #VDUROWS-1            ; X is row counter, 15..0
+rowload         ldy #VDUCOLS-1            ; Y is column counter, 47..0
+colload         lda (map0),y              ; Load from buffer in main RAM
+                sta (vdu),y               ; Store into VDU
+                dey
+                bpl colload               ; Loop over columns
+                clc                       ; Add VDUSTRIDE to 'vdu' vector
+                lda vdu
+                adc #VDUSTRIDE
+                sta vdu
+                bcc nocarry3
+                inc vdu+1
+nocarry3        clc                       ; Add VDUCOLS to 'map0' vector
+                lda map0
+                adc #VDUCOLS
+                sta map0
+                bcc nocarry4
+                inc map0+1
+nocarry4        dex
+                bpl rowload               ; Loop over rows
+                pla
+                tay
+                pla
+                tax
+                pla
+                rts
+                
 ; prtmsg
 ; Print a message pointed to by A and Y
 ; Entry: A=LO, Y=HI
@@ -396,4 +493,8 @@ BASICSPLASH     FCB CTRL_L                ; Clear screen
                 FCB CR,LF
                 FCB 150                   ; Original UK101 cursor
                 FCB EOS
+                
+splashsave      RMB VDUCOLS*VDUROWS       ; Save area for complete pre-drawn screen image
+uk101save       RMB VDUCOLS*VDUROWS       ; Save area for complete UK101 graphic
+
                 
