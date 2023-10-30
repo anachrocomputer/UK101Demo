@@ -134,23 +134,25 @@ main            lda #JMP_ABS              ; Jump absolute opcode
                 ldy #>m6502
                 ldx #128                  ; Display more slowly
                 jsr showbitmap            ; Show first bitmap
-                nop
                 jsr GETKEY
+                
                 lda #GREEN                ; Select green text on black
                 sta COLOUR
                 lda #<graphic1
                 ldy #>graphic1
                 ldx #0
                 jsr showbitmap            ; Show second bitmap
-                nop
+                lda #<graphic1save        ; Save entire screen into RAM
+                ldy #>graphic1save
+                jsr vdusave
                 jsr GETKEY
+                
                 lda #YELLOW               ; Select yellow text on black
                 sta COLOUR
                 lda #<UK101
                 ldy #>UK101
                 ldx #0  
                 jsr showbitmap            ; Show third bitmap
-                nop
                 jsr GETKEY
                 
                 ldx #VDUCOLS              ; Scroll 48 times to clear screen
@@ -181,6 +183,12 @@ loop            lda #255
                 ldy #>splashsave
                 ldx #255
                 jsr vduload
+                jsr GETKEY
+                
+                lda #<graphic1save        ; Re-load earlier saved screen into VDU
+                ldy #>graphic1save
+                ldx #255                  ; Slowly wipe up the screen
+                jsr vduwipeup
                 jsr GETKEY
                 
                 brk
@@ -436,6 +444,59 @@ nocarry4        lda dlyload               ; Optional delay for wipe effect
                 rts
 dlyload         fcb 0
                 
+; vduwipeup
+; Copy a buffer pointed to by A and Y into VDU RAM, working bottom-to-top
+; Entry: A=LO, Y=HI pointer to save area in main RAM (source), X=delay factor
+; Exit: registers unchanged
+vduwipeup       sta map0                  ; 'map0' vector points to save area in main RAM
+                sty map0+1
+                stx dlyload               ; Save delay factor
+                pha
+                txa
+                pha
+                tya
+                pha
+                lda #<VDUROW15            ; 'vdu' vector points to bottom row in VDU RAM
+                sta vdu
+                lda #>VDUROW15
+                sta vdu+1
+                lda map0                  ; 'map0' pointer needs to point to bottom row of save area
+                clc                       ; i.e. 15 rows lower down
+offset15rows    equ VDUCOLS*15            ; Work around yet another bug in the assembler
+                adc #<offset15rows
+                sta map0
+                lda map0+1
+                adc #>offset15rows
+                sta map0+1
+                ldx #VDUROWS-1            ; X is row counter, 15..0
+rowwipe         ldy #VDUCOLS-1            ; Y is column counter, 47..0
+colwipe         lda (map0),y              ; Load from buffer in main RAM
+                sta (vdu),y               ; Store into VDU
+                dey
+                bpl colwipe               ; Loop over columns
+                sec                       ; Subtract VDUSTRIDE from 'vdu' vector
+                lda vdu
+                sbc #VDUSTRIDE
+                sta vdu
+                bcs carry5
+                dec vdu+1
+carry5          sec                       ; Subtract VDUCOLS from 'map0' vector
+                lda map0
+                sbc #VDUCOLS
+                sta map0
+                bcs carry6
+                dec map0+1
+carry6          lda dlyload               ; Optional delay for wipe effect
+                jsr delay2
+                dex
+                bpl rowwipe               ; Loop over rows
+                pla
+                tay
+                pla
+                tax
+                pla
+                rts
+                
 ; prtmsg
 ; Print a message pointed to by A and Y
 ; Entry: A=LO, Y=HI
@@ -509,5 +570,6 @@ BASICSPLASH     FCB CTRL_L                ; Clear screen
                 
 splashsave      RMB VDUCOLS*VDUROWS       ; Save area for complete pre-drawn screen image
 uk101save       RMB VDUCOLS*VDUROWS       ; Save area for complete UK101 graphic
+graphic1save    RMB VDUCOLS*VDUROWS       ; Save area for entire pre-drawn graphic
 
                 
