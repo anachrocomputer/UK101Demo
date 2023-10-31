@@ -46,6 +46,15 @@ Note that the code now requires more than 4k of RAM and will not run
 on an unexpanded UK101.
 8k machines should be fine though.
 
+However, the Extended Monitor that was supplied on cassette with the
+original UK101 kit occupies addresses in the 4k RAM area that we'll
+overwrite when loading this code.
+I've moved the Extended Monitor up to $C000 and put it in an EPROM,
+so my machine can load into any part of RAM.
+I'm not sure the best way to fix this issue,
+so if any UK101 users have some good suggestions,
+please let me know.
+
 Once loaded, execute the program at address $0300.
 
 
