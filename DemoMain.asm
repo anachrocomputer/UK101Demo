@@ -126,13 +126,21 @@ main            lda #JMP_ABS              ; Jump absolute opcode
                 lda #<uk101save           ; Save entire screen into RAM
                 ldy #>uk101save
                 jsr vdusave
-                
                 jsr GETKEY
+                
                 lda #CYAN                 ; Select cyan text on black
                 sta COLOUR
                 lda #<m6502
                 ldy #>m6502
                 ldx #128                  ; Display more slowly
+                jsr showbitmap            ; Show first bitmap
+                jsr GETKEY
+
+                lda #YELLOW               ; Select yellow text on black
+                sta COLOUR
+                lda #<basic
+                ldy #>basic
+                ldx #64                   ; Display more slowly
                 jsr showbitmap            ; Show first bitmap
                 jsr GETKEY
                 
@@ -156,11 +164,19 @@ main            lda #JMP_ABS              ; Jump absolute opcode
                 jsr GETKEY
                 
                 ldx #VDUCOLS              ; Scroll 48 times to clear screen
-loop            lda #255
+loop            lda #128
                 jsr delay2
                 jsr scroll1r              ; Scroll VDU to the right
                 dex
                 bne loop
+                
+                lda #MAGENTA              ; Select magenta text on black
+                sta COLOUR
+                lda #<rgbcolour
+                ldy #>rgbcolour
+                ldx #255 
+                jsr showbitmap            ; Show third bitmap
+                jsr GETKEY
                 
                 lda #WHITE                ; Select white text on black
                 sta COLOUR

@@ -11,6 +11,9 @@ all: UK101Demo.hex
 pbm2fcb: pbm2fcb.c
 	$(CC) $(CFLAGS) -o pbm2fcb pbm2fcb.c
 
+basic.asm: basic.pbm pbm2fcb
+	./pbm2fcb basic.pbm >basic.asm
+
 UK101.asm: UK101.pbm pbm2fcb
 	./pbm2fcb UK101.pbm >UK101.asm
 
@@ -20,8 +23,11 @@ graphic1.asm: graphic1.pbm pbm2fcb
 m6502.asm: m6502.pbm pbm2fcb
 	./pbm2fcb m6502.pbm >m6502.asm
 
-UK101Demo.asm: DemoMain.asm UK101.asm graphic1.asm m6502.asm
-	cat DemoMain.asm UK101.asm graphic1.asm m6502.asm >UK101Demo.asm
+rgbcolour.asm: rgbcolour.pbm pbm2fcb
+	./pbm2fcb rgbcolour.pbm >rgbcolour.asm
+
+UK101Demo.asm: DemoMain.asm basic.asm UK101.asm graphic1.asm m6502.asm rgbcolour.asm
+	cat DemoMain.asm basic.asm UK101.asm graphic1.asm m6502.asm rgbcolour.asm >UK101Demo.asm
 
 UK101Demo.hex: UK101Demo.asm UK101.asm
 	$(AS65) UK101Demo.asm UK101Demo.hex UK101Demo.lst
