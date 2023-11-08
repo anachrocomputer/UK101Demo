@@ -170,12 +170,18 @@ loop            lda #128
                 dex
                 bne loop
                 
-                lda #MAGENTA              ; Select magenta text on black
+                lda #WHITE                ; Select white text on black
                 sta COLOUR
                 lda #<rgbcolour
                 ldy #>rgbcolour
                 ldx #255 
                 jsr showbitmap            ; Show third bitmap
+                jsr GETKEY
+                
+                lda #<colourbars          ; Point to pre-drawn colour stripe
+                ldy #>colourbars
+                ldx #255                  ; Wipe slowly top-to-bottom
+                jsr colourwipe
                 jsr GETKEY
                 
                 lda #WHITE                ; Select white text on black
@@ -205,6 +211,12 @@ loop            lda #128
                 ldy #>graphic1save
                 ldx #255                  ; Slowly wipe up the screen
                 jsr vduwipeup
+                jsr GETKEY
+                
+                lda #<colourbars          ; Point to pre-drawn colour stripe
+                ldy #>colourbars
+                ldx #255                  ; Wipe slowly top-to-bottom
+                jsr colourwipe
                 jsr GETKEY
                 
                 brk
@@ -513,6 +525,45 @@ carry6          lda dlyload               ; Optional delay for wipe effect
                 pla
                 rts
                 
+; colourwipe
+; Draw a pre-defined colour stripe into all row of the VDU colour RAM
+; Entry: A=LO, Y=HI pointer to colour stripe (source), X=delay factor
+; Exit: registers unchanged
+colourwipe      sta map0                  ; 'map0' vector points to main RAM
+                sty map0+1
+                stx dlyload               ; Save delay factor
+                pha
+                txa
+                pha
+                tya
+                pha
+                lda #<COLHOME             ; 'colvec' vector points to colour RAM
+                sta colvec
+                lda #>COLHOME
+                sta colvec+1
+                ldx #VDUROWS-1            ; X is row counter, 15..0
+rowload2        ldy #VDUCOLS-1            ; Y is column counter, 47..0
+colload2        lda (map0),y              ; Load from buffer in main RAM
+                sta (colvec),y            ; Store into VDU colour RAM
+                dey
+                bpl colload2              ; Loop over columns
+                clc                       ; Add VDUSTRIDE to 'colvec' vector
+                lda colvec
+                adc #VDUSTRIDE
+                sta colvec
+                bcc nocarry5
+                inc colvec+1        
+nocarry5        lda dlyload               ; Optional delay for wipe effect
+                jsr delay2
+                dex
+                bpl rowload2              ; Loop over rows
+                pla
+                tay
+                pla
+                tax
+                pla
+                rts
+                
 ; prtmsg
 ; Print a message pointed to by A and Y
 ; Entry: A=LO, Y=HI
@@ -583,6 +634,13 @@ BASICSPLASH     FCB CTRL_L                ; Clear screen
                 FCB CR,LF
                 FCB 150                   ; Original UK101 cursor
                 FCB EOS
+                
+colourbars      FCB YELLOW,YELLOW,YELLOW,YELLOW,YELLOW,YELLOW,YELLOW,YELLOW
+                FCB RED,RED,RED,RED,RED,RED,RED,RED
+                FCB MAGENTA,MAGENTA,MAGENTA,MAGENTA,MAGENTA,MAGENTA,MAGENTA,MAGENTA
+                FCB GREEN,GREEN,GREEN,GREEN,GREEN,GREEN,GREEN,GREEN
+                FCB CYAN,CYAN,CYAN,CYAN,CYAN,CYAN,CYAN,CYAN
+                FCB BLUE,BLUE,BLUE,BLUE,BLUE,BLUE,BLUE,BLUE
                 
 splashsave      RMB VDUCOLS*VDUROWS       ; Save area for complete pre-drawn screen image
 uk101save       RMB VDUCOLS*VDUROWS       ; Save area for complete UK101 graphic
